@@ -246,7 +246,7 @@ public class XmlModelReader
             return;
         }
         // Remember to prevent duplicates
-        pv_names.put(pv_node_name, parent.getPathName());
+        //pv_names.put(pv_node_name, parent.getPathName());
 
         final AlarmClientLeaf pv = new AlarmClientLeaf(parent.getPathName(), pv_node_name);
         pv.addToParent(parent);
