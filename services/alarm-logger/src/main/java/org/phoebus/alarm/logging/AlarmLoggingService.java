@@ -61,8 +61,8 @@ public class AlarmLoggingService {
 
     private static final String COMMANDS =
             "Commands:\n" +
-            "\thelp             - Show help.\n" +
-            "\tshutdown         - Shut alarm logger down and exit.\n";
+                    "\thelp             - Show help.\n" +
+                    "\tshutdown         - Shut alarm logger down and exit.\n";
 
     private static final CountDownLatch done = new CountDownLatch(1);
 
@@ -77,6 +77,7 @@ public class AlarmLoggingService {
     }
 
     public static void main(final String[] original_args) throws Exception {
+        System.out.println("Starting Alarm Logger");
         LogManager.getLogManager().readConfiguration(AlarmLoggingService.class.getResourceAsStream("/alarm_logger_logging.properties"));
 
         // load the default properties
@@ -89,13 +90,14 @@ public class AlarmLoggingService {
         final List<String> args = new ArrayList<>(List.of(original_args));
         final Iterator<String> iter = args.iterator();
         try {
+            System.out.println("Loading properties");
             while (iter.hasNext()) {
 
                 final String cmd = iter.next();
-		if ( cmd.equals("-h") || cmd.equals("-help")) {
-		    use_shell = false;
+                if ( cmd.equals("-h") || cmd.equals("-help")) {
+                    use_shell = false;
                     help();
-		    System.exit(0);
+                    System.exit(0);
                     return;
                 } else if (cmd.equals("-noshell")) {
                     use_shell = false;
@@ -190,16 +192,17 @@ public class AlarmLoggingService {
                     throw new Exception("Unknown option " + cmd);
             }
         } catch (Exception ex) {
-	    System.out.println("\n>>>> Print StackTrace ....");
-	    ex.printStackTrace();
-	    System.out.println("\n>>>> Please check available arguments of alarm-logger as follows:");
-	    help();
-	    System.exit(-1);
-	    return;
+            System.out.println("\n>>>> Print StackTrace ....");
+            ex.printStackTrace();
+            System.out.println("\n>>>> Please check available arguments of alarm-logger as follows:");
+            help();
+            System.exit(-1);
+            return;
         }
 
         logger.info("Alarm Logging Service (PID " + ProcessHandle.current().pid() + ")");
         context = SpringApplication.run(AlarmLoggingService.class, original_args);
+        System.out.println("Spring application run done");
 
         // Create scheduler with configured or default thread pool size
         Integer threadPoolSize;
@@ -210,13 +213,14 @@ public class AlarmLoggingService {
             threadPoolSize = 4;
         }
         Scheduler = Executors.newScheduledThreadPool(threadPoolSize);
+        System.out.println("Thread pool created");
 
-        logger.info("Properties:");
-        properties.forEach((k, v) -> { logger.info(k + ":" + v); });
+        System.out.println("Properties:");
+        properties.forEach((k, v) -> { System.out.println(k + ":" + v); });
 
         // Read list of Topics
         final List<String> topicNames = Arrays.asList(properties.getProperty("alarm_topics").split(","));
-        logger.info("Starting logger for '..State': " + topicNames);
+        System.out.println("Starting logger for '..State': " + topicNames);
 
         // Start a new stream consumer for each topic
         topicNames.forEach(topic -> {
@@ -230,6 +234,7 @@ public class AlarmLoggingService {
                 logger.log(Level.SEVERE, "Creation of alarm logging service for '" + topic + "' failed", ex);
             }
         });
+        System.out.println("Consumers created");
 
         // Wait in command shell until closed
         if(use_shell)
@@ -243,8 +248,9 @@ public class AlarmLoggingService {
         {
             Thread.currentThread().join();
         }
-
+        System.out.println("Closing");
         close();
+        System.out.println("All done");
         System.exit(0);
     }
 

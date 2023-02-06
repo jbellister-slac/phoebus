@@ -42,7 +42,7 @@ public class AlarmCmdLogger implements Runnable {
     private final String topic;
     private final Serde<AlarmCommandMessage> alarmCommandMessageSerde;
 
-    
+
     private IndexNameHelper indexNameHelper;
 
     /**
@@ -53,6 +53,7 @@ public class AlarmCmdLogger implements Runnable {
      */
     public AlarmCmdLogger(String topic) throws Exception {
         super();
+        System.out.println("Creating AlarmCmdLogger for: " + topic);
         this.topic = topic;
 
         MessageParser<AlarmCommandMessage> messageParser = new MessageParser<AlarmCommandMessage>(AlarmCommandMessage.class);
@@ -72,7 +73,7 @@ public class AlarmCmdLogger implements Runnable {
 
         if (props.containsKey(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG)){
             kafkaProps.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
-                           props.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
+                    props.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
         } else {
             kafkaProps.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         }
@@ -117,9 +118,9 @@ public class AlarmCmdLogger implements Runnable {
 
                     @Override
                     public void close() {
-                        
+
                     }
-                    
+
                 };
             }
         });
@@ -127,6 +128,7 @@ public class AlarmCmdLogger implements Runnable {
         // Commit to elastic
         timeStampedAlarms.foreach((k, v) -> {
             String topic_name = indexNameHelper.getIndexName(v.getMessage_time());
+            System.out.println("Commit cmd for " + topic_name);
             ElasticClientHelper.getInstance().indexAlarmCmdDocument(topic_name, v);
         });
         final KafkaStreams streams = new KafkaStreams(builder.build(), kafkaProps);

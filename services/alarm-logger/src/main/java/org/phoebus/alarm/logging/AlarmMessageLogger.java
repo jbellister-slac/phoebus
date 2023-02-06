@@ -47,21 +47,22 @@ public class AlarmMessageLogger implements Runnable {
      * Create a alarm logger for the alarm messages (both state and configuration)
      * for a given alarm server topic.
      * This runnable will create the kafka streams for the given alarm messages which match the format 'topic'
-     * 
+     *
      * @param topic - the alarm topic in kafka
      */
     public AlarmMessageLogger(String topic) {
         super();
+        System.out.println("Creating AlarmMessageLogger for: " + topic);
         this.topic = topic;
 
         MessageParser<AlarmMessage> messageParser = new MessageParser<>(AlarmMessage.class);
         alarmMessageSerde = Serdes.serdeFrom(messageParser, messageParser);
-
+        System.out.println("Construction for " + topic + " done");
     }
 
     @Override
     public void run() {
-        logger.info("Starting the alarm messages stream consumer for " + topic);
+        System.out.println("Starting the alarm messages stream consumer for " + topic);
 
         Properties props = new Properties();
         props.putAll(PropertiesHelper.getProperties());
@@ -69,24 +70,29 @@ public class AlarmMessageLogger implements Runnable {
         Properties kafkaProps = KafkaHelper.loadPropsFromFile(props.getProperty("kafka_properties",""));
         kafkaProps.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-"+topic+"-alarm-messages");
 
+        System.out.println("Loaded kafka props");
+
         if (props.containsKey(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG)){
             kafkaProps.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG,
-                           props.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
+                    props.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
+            System.out.println("Setting kafka addr to: " + props.get(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG));
         } else {
             kafkaProps.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+            System.out.println("Set kafka addr to localhost");
         }
-        
-        
+
+
         final String indexDateSpanUnits = props.getProperty("date_span_units");
         final boolean useDatedIndexNames = Boolean.parseBoolean(props.getProperty("use_dated_index_names"));
 
         try {
             stateIndexNameHelper = new IndexNameHelper(topic + STATE_INDEX_FORMAT, useDatedIndexNames, indexDateSpanUnits);
             configIndexNameHelper = new IndexNameHelper(topic + CONFIG_INDEX_FORMAT , useDatedIndexNames, indexDateSpanUnits);
+            System.out.println("Index helpers created");
         } catch (Exception ex) {
             logger.log(Level.SEVERE, "Time based index creation failed.", ex);
         }
-        
+
         // Attach a message time stamp.
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -112,12 +118,14 @@ public class AlarmMessageLogger implements Runnable {
 
         @SuppressWarnings("unchecked")
         KStream<String, AlarmMessage>[] alarmBranches = alarms.branch((k,v) -> k.startsWith("state"),
-                                                                      (k,v) -> k.startsWith("config"),
-                                                                      (k,v) -> false
-                                                                     );
+                (k,v) -> k.startsWith("config"),
+                (k,v) -> false
+        );
 
+        System.out.println("About to process alarm messages");
         processAlarmStateStream(alarmBranches[0], props);
         processAlarmConfigurationStream(alarmBranches[1], props);
+        System.out.println("Done processing alarm messages");
 
         final KafkaStreams streams = new KafkaStreams(builder.build(), kafkaProps);
         final CountDownLatch latch = new CountDownLatch(1);
@@ -142,6 +150,7 @@ public class AlarmMessageLogger implements Runnable {
     }
 
     private void processAlarmStateStream(KStream<String, AlarmMessage> alarmStateBranch, Properties props) {
+        System.out.println("Processing alarm state stream");
 
         KStream<String, AlarmStateMessage> transformedAlarms = alarmStateBranch
                 .transform(new TransformerSupplier<String, AlarmMessage, KeyValue<String, AlarmStateMessage>>() {
@@ -163,6 +172,7 @@ public class AlarmMessageLogger implements Runnable {
                                 newValue.setPv(pv);
 
                                 newValue.setMessage_time(Instant.ofEpochMilli(context.timestamp()));
+                                System.out.println("Processed key: " + key + " and value: " + newValue);
                                 return new KeyValue<>(key, newValue);
                             }
 
@@ -180,18 +190,23 @@ public class AlarmMessageLogger implements Runnable {
                     }
                 });
 
+        System.out.println("Done with that part");
+
         KStream<String, AlarmStateMessage> filteredAlarms = transformedAlarms.filter((k, v) -> {
             return v != null ? v.isLeaf() : false;
         });
 
         // Commit to elastic
+        System.out.println("Committing to ES");
         filteredAlarms.foreach((k, v) -> {
+            System.out.println("Printing for key: " + k);
             ElasticClientHelper.getInstance().indexAlarmStateDocuments(stateIndexNameHelper.getIndexName(v.getMessage_time()), v);
         });
 
     }
 
     private void processAlarmConfigurationStream(KStream<String, AlarmMessage> alarmConfigBranch, Properties props) {
+        System.out.println("Processing alarm configuration stream");
         KStream<String, AlarmConfigMessage> alarmConfigMessages = alarmConfigBranch.transform(new TransformerSupplier<String, AlarmMessage, KeyValue<String,AlarmConfigMessage>>() {
 
             @Override
@@ -205,12 +220,13 @@ public class AlarmMessageLogger implements Runnable {
 
                     @Override
                     public KeyValue<String, AlarmConfigMessage> transform(String key, AlarmMessage value) {
-                        
+
                         key = key.replace("\\", "");
                         if(value != null) {
                             AlarmConfigMessage newValue = value.getAlarmConfigMessage();
                             newValue.setConfig(key);
                             newValue.setMessage_time(Instant.ofEpochMilli(context.timestamp()));
+                            System.out.println("Processed (Configuration) key: " + key + " and value: " + newValue);
                             return new KeyValue<String, AlarmConfigMessage>(key, newValue);
                         } else {
                             return null;
@@ -219,15 +235,17 @@ public class AlarmMessageLogger implements Runnable {
 
                     @Override
                     public void close() {
-                        
+
                     }
-                    
+
                 };
             }
         });
 
         // Commit to elastic
+        System.out.println("Committing (Configuration) to ES");
         alarmConfigMessages.foreach((k, v) -> {
+            System.out.println("Putting (Configuration) for key: " + k);
             ElasticClientHelper.getInstance().indexAlarmConfigDocuments(configIndexNameHelper.getIndexName(v.getMessage_time()), v);
         });
     }

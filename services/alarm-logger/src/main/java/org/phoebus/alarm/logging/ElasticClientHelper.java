@@ -72,6 +72,7 @@ public class ElasticClientHelper {
     private final ObjectMapper mapper = new ObjectMapper();
 
     private ElasticClientHelper() {
+        System.out.println("Creating new ElasticClientHelper");
         try {
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 logger.info("Shutting down the ElasticClientHelper.");
@@ -88,8 +89,9 @@ public class ElasticClientHelper {
             }));
 
             // Create the low-level client
+            System.out.println("Creating rest client");
             restClient = RestClient.builder(
-                            new HttpHost(props.getProperty("es_host"),Integer.parseInt(props.getProperty("es_port")))).build();
+                    new HttpHost(props.getProperty("es_host"),Integer.parseInt(props.getProperty("es_port")))).build();
 
             mapper.registerModule(new JavaTimeModule());
             transport = new RestClientTransport(
@@ -101,8 +103,12 @@ public class ElasticClientHelper {
                 sniffer = Sniffer.builder(restClient).build();
                 logger.log(Level.INFO, "ES Sniff feature is enabled");
             }
+            else {
+                System.out.println("No sniffing");
+            }
             // Initialize the elastic templates
             esInitialized.set(!Boolean.parseBoolean(props.getProperty("es_create_templates")));
+            System.out.println("Should init templates? " + esInitialized);
 
             // Start the executor for periodically logging into es
             job = scheduledExecutorService.scheduleAtFixedRate(new flush2Elastic(stateMessagedQueue, configMessagedQueue),
@@ -121,7 +127,9 @@ public class ElasticClientHelper {
     }
 
     public static ElasticClientHelper getInstance() {
+        System.out.println("Getting ECH instance");
         if (instance == null) {
+            System.out.println("No instance, creating new one");
             instance = new ElasticClientHelper();
         }
         return instance;
@@ -137,6 +145,7 @@ public class ElasticClientHelper {
      * @param alarmStateMessage
      */
     public void indexAlarmStateDocuments(String indexName, AlarmStateMessage alarmStateMessage) {
+        System.out.println("Attempting to index alarm state");
         try {
             stateMessagedQueue.put(new SimpleImmutableEntry<>(indexName,alarmStateMessage));
         } catch (InterruptedException e) {
@@ -151,6 +160,7 @@ public class ElasticClientHelper {
      * @return
      */
     public boolean indexAlarmCmdDocument(String indexName, AlarmCommandMessage alarmCommandMessage) {
+        System.out.println("Attempting to index alarm cmd");
         IndexRequest<AlarmCommandMessage> indexRequest = new IndexRequest.Builder<AlarmCommandMessage>()
                 .index(indexName.toLowerCase())
                 .document(alarmCommandMessage)
@@ -170,6 +180,7 @@ public class ElasticClientHelper {
      * @param alarmConfigMessage
      */
     public void indexAlarmConfigDocuments(String indexName, AlarmConfigMessage alarmConfigMessage) {
+        System.out.println("Attempting to index alarm config");
         try {
             configMessagedQueue.put(new SimpleImmutableEntry<>(indexName,alarmConfigMessage));
         } catch (InterruptedException e) {
@@ -193,10 +204,13 @@ public class ElasticClientHelper {
 
         @Override
         public void run() {
+            System.out.println("Running the ES flush job");
             if (esInitialized.compareAndSet(false, true)) {
                 try {
+                    System.out.println("INITTING INDICES");
                     initializeIndices();
                 } catch (IOException e) {
+                    System.out.println("INIT WENT WRONG " + e.getMessage());
                     logger.log(Level.SEVERE, "failed to create the alarm log indices ", e);
                 }
             }
@@ -217,13 +231,13 @@ public class ElasticClientHelper {
                                 .document(pair.getValue().sourceMap()))));
                 try {
                     BulkResponse bulkResponse = client.bulk(bulkRequest.build());
-                        bulkResponse.items().forEach(item -> {
-                                    if (item.error()!=null) {
-                                        logger.log(Level.SEVERE, "Failed while indexing to " + item.index() + " type "
-                                                + item.operationType() + item.error().reason() + "]");
-                                    }
+                    bulkResponse.items().forEach(item -> {
+                                if (item.error()!=null) {
+                                    logger.log(Level.SEVERE, "Failed while indexing to " + item.index() + " type "
+                                            + item.operationType() + item.error().reason() + "]");
                                 }
-                        );
+                            }
+                    );
                 } catch (IOException e) {
                     logger.log(Level.SEVERE, "failed to log messages to index ", e);
                 }
@@ -248,7 +262,9 @@ public class ElasticClientHelper {
          */
         public void initializeIndices() throws IOException {
             // Create the alarm state messages index template
+            System.out.println("Begin initting indices");
             boolean exists = client.indices().existsIndexTemplate(ExistsIndexTemplateRequest.of(i -> i.name(ALARM_STATE_TEMPLATE))).value();
+            System.out.println("Exists is: " + exists);
 
             if (!exists) {
                 try (InputStream is = ElasticClientHelper.class.getResourceAsStream("/alarms_state_template.json")) {
@@ -261,7 +277,7 @@ public class ElasticClientHelper {
                             .build();
                     PutIndexTemplateResponse putTemplateResponse = client.indices().putIndexTemplate(templateRequest);
                     putTemplateResponse.acknowledged();
-                    logger.log(Level.INFO, "Created " + ALARM_STATE_TEMPLATE + " template.");
+                    System.out.println("Created " + ALARM_STATE_TEMPLATE + " template.");
                 } catch (Exception e) {
                     logger.log(Level.INFO, "Failed to create template " + ALARM_STATE_TEMPLATE + " template.", e);
                 }
@@ -269,7 +285,7 @@ public class ElasticClientHelper {
 
             // Create the alarm command messages index template
             exists = client.indices().existsIndexTemplate(ExistsIndexTemplateRequest.of(i -> i.name(ALARM_CMD_TEMPLATE))).value();
-
+            System.out.println("Exists2 is: " + exists);
             if (!exists) {
                 try (InputStream is = ElasticClientHelper.class.getResourceAsStream("/alarms_cmd_template.json")) {
                     PutIndexTemplateRequest templateRequest = new PutIndexTemplateRequest.Builder()
@@ -289,7 +305,7 @@ public class ElasticClientHelper {
 
             // Create the alarm config messages index template
             exists = client.indices().existsIndexTemplate(ExistsIndexTemplateRequest.of(i -> i.name(ALARM_CONFIG_TEMPLATE))).value();
-
+            System.out.println("Exists3 is: " + exists);
             if (!exists) {
                 try (InputStream is = ElasticClientHelper.class.getResourceAsStream("/alarms_config_template.json")) {
                     PutIndexTemplateRequest templateRequest = new PutIndexTemplateRequest.Builder()
@@ -306,7 +322,7 @@ public class ElasticClientHelper {
                     logger.log(Level.INFO, "Failed to create template " + ALARM_CONFIG_TEMPLATE + " template.", e);
                 }
             }
-
+            System.out.println("End initting indices");
         }
     }
 }
