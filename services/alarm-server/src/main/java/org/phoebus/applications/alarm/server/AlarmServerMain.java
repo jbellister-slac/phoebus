@@ -72,7 +72,7 @@ public class AlarmServerMain implements ServerModelListener
                         "\trestart          - Re-load alarm configuration and restart.\n" +
                         "\tshutdown         - Shut alarm server down and exit.\n";
 
-    private AlarmServerMain(final String server, final String config, final boolean use_shell, final String kafka_props_file)
+    private AlarmServerMain(final String server, final String config, final boolean use_shell, final String kafka_props_file, final String xml_file_path)
     {
         logger.info("Server: " + server);
         logger.info("Config: " + config);
@@ -85,6 +85,10 @@ public class AlarmServerMain implements ServerModelListener
             boolean run = true;
             while (run)
             {
+                if (xml_file_path != null && !xml_file_path.isEmpty()) {
+                    logger.info("Importing model from: " + xml_file_path);
+                    new AlarmConfigTool().importModel(xml_file_path, server, config, kafka_props_file);
+                }
                 logger.info("Fetching past alarm states...");
                 final AlarmStateInitializer init = new AlarmStateInitializer(server, config, kafka_props_file);
                 if (init.awaitCompleteStates())
@@ -564,6 +568,7 @@ public class AlarmServerMain implements ServerModelListener
         final List<String> args = new ArrayList<>(List.of(original_args));
         final Iterator<String> iter = args.iterator();
         HashMap<String, String> parsed_args = new HashMap<String, String>();
+        String xml_file_path = "";
         try
         {
             // define command line arguments
@@ -580,6 +585,7 @@ public class AlarmServerMain implements ServerModelListener
             String connect_secs_arg     = "-connect_secs";
             String stable_secs_arg      = "-stable_secs";
             String kafka_props_arg      = "-kafka_properties";
+            String xml_file_arg         = "-xml_file";
 
             Set<String> options = Set.of(
                 server_arg,
@@ -590,7 +596,8 @@ public class AlarmServerMain implements ServerModelListener
                 logging_arg,
                 connect_secs_arg,
                 stable_secs_arg,
-                kafka_props_arg);
+                kafka_props_arg,
+                xml_file_arg);
 
             Set<String> flags = Set.of(
                 help_arg,
@@ -630,8 +637,13 @@ public class AlarmServerMain implements ServerModelListener
             }
             if (parsed_args.containsKey(logging_arg))
                 LogManager.getLogManager().readConfiguration(new FileInputStream(parsed_args.get(logging_arg)));
-            if (parsed_args.containsKey(settings_arg))
-            {
+
+            if (parsed_args.containsKey(xml_file_arg)) {
+                xml_file_path = parsed_args.get(xml_file_arg);
+                logger.info("Setting xml file path to: " + xml_file_path);
+            }
+
+            if (parsed_args.containsKey(settings_arg)){
                 final String filename = parsed_args.get(settings_arg);
                 logger.info("Loading settings from " + filename);
                 PropertyPreferenceLoader.load(new FileInputStream(filename));
@@ -683,8 +695,8 @@ public class AlarmServerMain implements ServerModelListener
             if (parsed_args.containsKey(import_arg))
             {
                 final String filename = parsed_args.get(import_arg);
-                logger.info("Import model from " + filename);
-                new AlarmConfigTool().importModel(filename, server, config, kafka_properties);
+                logger.info("Skipping import of" + filename);
+                //new AlarmConfigTool().importModel(filename, server, config, kafka_properties);
             }
             if (parsed_args.containsKey(export_arg) || parsed_args.containsKey(import_arg))
                 return;
@@ -699,6 +711,6 @@ public class AlarmServerMain implements ServerModelListener
 
         logger.info("Alarm Server (PID " + ProcessHandle.current().pid() + ")");
 
-        new AlarmServerMain(server, config, use_shell, kafka_properties);
+        new AlarmServerMain(server, config, use_shell, kafka_properties, xml_file_path);
     }
 }
