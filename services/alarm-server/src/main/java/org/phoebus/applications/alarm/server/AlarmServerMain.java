@@ -10,6 +10,12 @@ package org.phoebus.applications.alarm.server;
 import static org.phoebus.applications.alarm.AlarmSystemConstants.logger;
 
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -47,6 +53,9 @@ public class AlarmServerMain implements ServerModelListener
     private volatile ServerModel  model;
     private volatile CommandShell shell;
     private String current_path = "";
+
+    private String loaded_xml_file_path = "";
+    private String current_config_checksum = "";
 
     private static final String COMMANDS =
                         "Commands:\n\n" +
@@ -87,8 +96,12 @@ public class AlarmServerMain implements ServerModelListener
             {
                 if (xml_file_path != null && !xml_file_path.isEmpty()) {
                     logger.info("Importing model from: " + xml_file_path);
+                    loaded_xml_file_path = xml_file_path;
                     new AlarmConfigTool().importModel(xml_file_path, server, config, kafka_props_file);
+                    current_config_checksum = calculateChecksum(xml_file_path);
+                    logger.info("File checksum set to: " + current_config_checksum);
                 }
+
                 logger.info("Fetching past alarm states...");
                 final AlarmStateInitializer init = new AlarmStateInitializer(server, config, kafka_props_file);
                 if (init.awaitCompleteStates())
@@ -412,7 +425,15 @@ public class AlarmServerMain implements ServerModelListener
             else if (command.equalsIgnoreCase("restart"))
             {
                 logger.log(Level.INFO, "Restart requested");
-                restart.offer(true);
+                String new_checksum = calculateChecksum(loaded_xml_file_path);
+                if (new_checksum.equals(current_config_checksum)) {
+                    logger.info("Skipping application reload - config file has not changed since last load");
+                }
+                else {
+                    current_config_checksum = new_checksum;
+                    logger.log(Level.INFO, "xml file has been modified since last load. Reloading...");
+                    restart.offer(true);
+                }
             }
             else
                 throw new Exception("Unknown command.");
@@ -421,6 +442,12 @@ public class AlarmServerMain implements ServerModelListener
         {
             logger.log(Level.WARNING, "Error for command. path: '" + path + "', JSON: '" + json + "'", ex);
         }
+    }
+
+    private String calculateChecksum(String filepath) throws IOException, NoSuchAlgorithmException {
+        byte[] data = Files.readAllBytes(Paths.get(filepath));
+        byte[] hash = MessageDigest.getInstance("MD5").digest(data);
+        return new BigInteger(1, hash).toString(16);
     }
 
     private void setDisableNotify(final boolean disable_notify)
