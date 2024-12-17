@@ -536,6 +536,7 @@ public class AlarmClient {
      * @throws Exception on error
      */
     public void removeComponent(final AlarmTreeItem<?> item) throws Exception {
+        System.out.println("Removing component :" + item);
         try {
             // Depth first deletion of all child nodes.
             final List<AlarmTreeItem<?>> children = item.getChildren();
@@ -550,11 +551,16 @@ public class AlarmClient {
             // The id message must arrive before the tombstone.
             final String json = new String(JsonModelWriter.deleteMessageToBytes());
             final ProducerRecord<String, String> id = new ProducerRecord<>(config_topic, AlarmSystem.CONFIG_PREFIX + item.getPathName(), json);
+            System.out.println("Sending this to the config topic for ID purposes: " + json);
             producer.send(id).get(KAFKA_CLIENT_TIMEOUT, TimeUnit.SECONDS);
+            System.out.println("ID send complete");
 
+            System.out.println("Sending the tombstone message");
             final ProducerRecord<String, String> tombstone = new ProducerRecord<>(config_topic, AlarmSystem.CONFIG_PREFIX + item.getPathName(), null);
             producer.send(tombstone).get(KAFKA_CLIENT_TIMEOUT, TimeUnit.SECONDS);
+            System.out.println("Tombstone sent");
         } catch (Exception ex) {
+            System.out.println("Error deleting " + item.getPathName() + " " + ex);
             throw new Exception("Error deleting " + item.getPathName(), ex);
         }
     }
@@ -606,6 +612,7 @@ public class AlarmClient {
      * Stop client
      */
     public void shutdown() {
+        System.out.println("Alarm client shutting down");
         running.set(false);
         consumer.wakeup();
         try {
