@@ -550,10 +550,10 @@ public class AlarmClient {
             // The id message must arrive before the tombstone.
             final String json = new String(JsonModelWriter.deleteMessageToBytes());
             final ProducerRecord<String, String> id = new ProducerRecord<>(config_topic, AlarmSystem.CONFIG_PREFIX + item.getPathName(), json);
-            producer.send(id).get(KAFKA_CLIENT_TIMEOUT, TimeUnit.SECONDS);
+            producer.send(id);
 
             final ProducerRecord<String, String> tombstone = new ProducerRecord<>(config_topic, AlarmSystem.CONFIG_PREFIX + item.getPathName(), null);
-            producer.send(tombstone).get(KAFKA_CLIENT_TIMEOUT, TimeUnit.SECONDS);
+            producer.send(tombstone);
         } catch (Exception ex) {
             throw new Exception("Error deleting " + item.getPathName(), ex);
         }
