@@ -86,6 +86,7 @@ public class AlarmServerMain implements ServerModelListener
         logger.info("Server: " + server);
         logger.info("Config: " + config);
         logger.info("Extra Kafka Properties: " + kafka_props_file);
+        System.out.println("\n Entering main loop \n");
 
         try
         {
