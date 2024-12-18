@@ -47,7 +47,7 @@ public class AlarmStateInitializer
     public static long CONNECTION_SECS = 10;
 
     /** Time the model must be stable for. Unit is seconds. Default is 4 seconds. */
-    public static long STABILIZATION_SECS = 4;
+    public static long STABILIZATION_SECS = 15;
     
     private final ResettableTimeout timer = new ResettableTimeout(CONNECTION_SECS);
     private final AtomicBoolean running = new AtomicBoolean(true);
