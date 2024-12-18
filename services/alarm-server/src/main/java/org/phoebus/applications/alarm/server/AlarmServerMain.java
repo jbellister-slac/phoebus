@@ -109,6 +109,8 @@ public class AlarmServerMain implements ServerModelListener
                 else
                     logger.log(Level.WARNING, "Keep receiving state updates, may have incomplete initial set of alarm states");
                 final ConcurrentHashMap<String, ClientState> initial_states = init.shutdown();
+                System.out.println("Initial states of alarms:");
+                System.out.println(initial_states);
 
                 logger.info("Start handling alarms");
                 model = new ServerModel(server, config, initial_states, this, kafka_props_file);

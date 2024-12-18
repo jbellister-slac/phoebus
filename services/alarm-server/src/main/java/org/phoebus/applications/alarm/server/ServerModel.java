@@ -94,6 +94,7 @@ class ServerModel
                        final String kafka_properties_file)
     {
         this.initial_states = initial_states;
+        System.out.println("sever model set initial states to: " + initial_states);
 
         config_state_topic = Objects.requireNonNull(config_name);
         command_topic  = config_name + AlarmSystem.COMMAND_TOPIC_SUFFIX;

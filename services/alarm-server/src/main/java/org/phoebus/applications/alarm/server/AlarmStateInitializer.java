@@ -117,8 +117,10 @@ public class AlarmStateInitializer
                             // Delete when PV was OK, or track non-OK severity.
                             if (state.severity == SeverityLevel.OK)
                                 inititial_severity.remove(path);
-                            else
+                            else {
+                                System.out.println("found non ok severity: " + path + " " + state);
                                 inititial_severity.put(path, state);
+                            }
                             timer.reset(STABILIZATION_SECS);
                         }
                     }

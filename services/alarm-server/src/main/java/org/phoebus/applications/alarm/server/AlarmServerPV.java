@@ -97,6 +97,7 @@ public class AlarmServerPV extends AlarmTreeItem<AlarmState> implements AlarmTre
         {
             current_state = new AlarmState(initial.current_severity, initial.current_message, "?", initial.time);
             alarm_state = new AlarmState(initial.severity, initial.message, initial.value, initial.time);
+            System.out.println("Initial state was used, current:" + current_state + " and alarm: " + alarm_state);
         }
         final AlarmLogicListener listener = new AlarmLogicListener()
         {
