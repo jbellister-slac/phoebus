@@ -391,7 +391,7 @@ class ServerModel
                 // Use the known initial state, but only once (remove from map)
                 if (last &&  is_leaf)
                 {
-                    final AlarmServerPV pv = new AlarmServerPV(this, parent.getPathName(), name, initial_states.remove(path));
+                    final AlarmServerPV pv = new AlarmServerPV(this, parent.getPathName(), name, initial_states.get(path));
                     pv.addToParent(parent);
                     return pv;
                 }
