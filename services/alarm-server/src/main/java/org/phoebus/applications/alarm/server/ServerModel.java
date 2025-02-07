@@ -24,6 +24,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.phoebus.applications.alarm.AlarmSystem;
+import org.phoebus.applications.alarm.Messages;
 import org.phoebus.applications.alarm.client.AlarmClientNode;
 import org.phoebus.applications.alarm.client.ClientState;
 import org.phoebus.applications.alarm.client.KafkaHelper;
@@ -270,9 +271,13 @@ class ServerModel
                         if (node instanceof AlarmServerPV   &&  !new_node)
                             ((AlarmServerPV)node).stop();
 
+                        // If this PV was disabled previously and has not been re-enabled yet, keep it that way
+                        ClientState the_initial_state = initial_states.get(path);
+                        boolean should_start_disabled = the_initial_state != null && Messages.Disabled.equals(the_initial_state.message);
+
                         // Return value of update..() tells us if it really changed.
                         // It might not have been necessary to stop the PV, but hard to tell in advance...
-                        JsonModelReader.updateAlarmItemConfig(node, json);
+                        JsonModelReader.updateAlarmItemConfig(node, json, should_start_disabled);
 
                         // A new PV, or an existing one that was stopped: Start it
                         if (node instanceof AlarmServerPV)

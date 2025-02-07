@@ -315,7 +315,7 @@ public class AlarmClient {
                         // New node? Will need to send update. Otherwise update when there's a change
                         if (node == null)
                             changed_node = node = findOrCreateNode(path, JsonModelReader.isLeafConfigOrState(json));
-                        if (JsonModelReader.updateAlarmItemConfig(node, json))
+                        if (JsonModelReader.updateAlarmItemConfig(node, json, false))
                             changed_node = node;
                     }
                 }

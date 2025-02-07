@@ -206,7 +206,7 @@ public class AlarmLogicUnitTest
 
         // No updates when state stays
         logic.computeNewState("b", SeverityLevel.MINOR, "high");
-        logic.check(false, false, SeverityLevel.MINOR, "high", SeverityLevel.MINOR, "high");
+        logic.check(true, false, SeverityLevel.MINOR, "high", SeverityLevel.MINOR, "high");
         assertEquals("a", logic.getAlarmState().getValue());
 
         // Follow into MAJOR alarm
@@ -763,7 +763,7 @@ public class AlarmLogicUnitTest
 
         // Same message
         logic.computeNewState("c", SeverityLevel.INVALID, "Timeout");
-        logic.check(false, false, SeverityLevel.INVALID, "Timeout", SeverityLevel.INVALID, "Disconnected");
+        logic.check(true, false, SeverityLevel.INVALID, "Timeout", SeverityLevel.INVALID, "Disconnected");
     }
 
     @Test
@@ -795,7 +795,7 @@ public class AlarmLogicUnitTest
 
         // Another Minor doesn't matter
         logic.computeNewState("a2", SeverityLevel.MINOR, "high");
-        logic.check(false, false, SeverityLevel.MINOR, "high", SeverityLevel.MINOR, "high");
+        logic.check(true, false, SeverityLevel.MINOR, "high", SeverityLevel.MINOR, "high");
         assertEquals("a", logic.getAlarmState().getValue());
 
         // Follow into Major

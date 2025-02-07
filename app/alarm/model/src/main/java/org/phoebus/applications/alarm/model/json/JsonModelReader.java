@@ -87,12 +87,12 @@ public class JsonModelReader
      *  @param json JSON with settings for the item
      *  @return <code>true</code> if configuration changed, <code>false</code> if there was nothing to update
      */
-    public static boolean updateAlarmItemConfig(final AlarmTreeItem<?> node, final Object json)
+    public static boolean updateAlarmItemConfig(final AlarmTreeItem<?> node, final Object json, boolean should_start_disabled)
     {
         final JsonNode actual = (JsonNode) json;
         boolean changed = updateAlarmNodeConfig(node, actual);
         if (node instanceof AlarmTreeLeaf)
-            changed |= updateAlarmLeafConfig((AlarmTreeLeaf) node, actual);
+            changed |= updateAlarmLeafConfig((AlarmTreeLeaf) node, actual, should_start_disabled);
         return changed;
     }
 
@@ -193,7 +193,7 @@ public class JsonModelReader
     }
 
     /** Update specifics of {@link AlarmTreeLeaf} */
-    private static boolean updateAlarmLeafConfig(final AlarmTreeLeaf node, final JsonNode json)
+    private static boolean updateAlarmLeafConfig(final AlarmTreeLeaf node, final JsonNode json, boolean should_start_disabled)
     {
 
         final DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -229,7 +229,11 @@ public class JsonModelReader
                 }
             }
         }
-        else {
+        else if (should_start_disabled) {
+            logger.log(Level.INFO, "Setting enabled to FALSE due to initial state");
+            node.setEnabled(false);
+        }
+    else {
             node.setEnabled(true);
         }
 

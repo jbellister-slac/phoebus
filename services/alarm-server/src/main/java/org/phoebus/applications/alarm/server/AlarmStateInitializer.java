@@ -19,6 +19,7 @@ import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.phoebus.applications.alarm.AlarmSystem;
+import org.phoebus.applications.alarm.Messages;
 import org.phoebus.applications.alarm.ResettableTimeout;
 import org.phoebus.applications.alarm.client.ClientState;
 import org.phoebus.applications.alarm.client.KafkaHelper;
@@ -114,8 +115,8 @@ public class AlarmStateInitializer
                         final ClientState state = JsonModelReader.parseClientState(json);
                         if (state != null)
                         {
-                            // Delete when PV was OK, or track non-OK severity.
-                            if (state.severity == SeverityLevel.OK)
+                            // Delete when PV was OK, or track non-OK severity or previous disable
+                            if (state.severity == SeverityLevel.OK && !Messages.Disabled.equals(state.message))
                                 inititial_severity.remove(path);
                             else
                                 inititial_severity.put(path, state);
