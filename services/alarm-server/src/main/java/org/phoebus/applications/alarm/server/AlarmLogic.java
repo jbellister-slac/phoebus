@@ -328,9 +328,9 @@ public class AlarmLogic // implements GlobalAlarmListener
             // Update current severity.
             current_state = received_state;
             // If there's no change to the current severity and message, we're done.
-            //if (received_state.severity == previous_severity  &&
-            //    received_state.message.equals(previous_message))
-            //    return;
+            if (received_state.severity == previous_severity  &&
+                received_state.message.equals(previous_message))
+                return;
 
             // Does this 'clear' an acknowledged severity? -> OK
             final boolean alarm_cleared =
