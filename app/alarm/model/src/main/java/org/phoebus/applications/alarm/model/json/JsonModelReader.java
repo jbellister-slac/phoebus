@@ -230,7 +230,6 @@ public class JsonModelReader
             }
         }
         else if (should_start_disabled) {
-            logger.log(Level.INFO, "Setting enabled to FALSE due to initial state");
             node.setEnabled(false);
         }
     else {

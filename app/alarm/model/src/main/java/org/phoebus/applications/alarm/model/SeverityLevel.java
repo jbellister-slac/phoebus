@@ -119,4 +119,19 @@ public enum SeverityLevel
     {
         return alarm_update_priority;
     }
+
+    /**
+     * Check if the previous alarm state was an acknowledgement.
+     * @param previous The alarm state before the alarm server was restarted
+     * @param current The current alarm state
+     * @return <code>true</code> if the alarm should still be acknowledged, <code>false</code> otherwise
+     */
+    public static boolean shouldRemainAcknowledged(SeverityLevel previous, SeverityLevel current) {
+        if (previous == null || current == null || !previous.name().endsWith("_ACK")) {
+            return false;
+        }
+
+        int acknowledgementPriority = previous.getAlarmUpdatePriority();
+        return current.getAlarmUpdatePriority() <= acknowledgementPriority - 1;
+    }
 }

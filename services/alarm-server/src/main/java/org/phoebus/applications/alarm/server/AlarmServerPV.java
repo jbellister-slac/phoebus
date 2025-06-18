@@ -91,12 +91,17 @@ public class AlarmServerPV extends AlarmTreeItem<AlarmState> implements AlarmTre
 
         final AlarmState current_state;
         final AlarmState alarm_state;
-        if (initial == null)
+        if (initial == null || !initial.severity.name().endsWith("_ACK"))
             current_state = alarm_state = new AlarmState(SeverityLevel.OK, "", "", Instant.now());
         else
         {
-            current_state = new AlarmState(initial.current_severity, initial.current_message, "?", initial.time);
             alarm_state = new AlarmState(initial.severity, initial.message, initial.value, initial.time);
+            // Keep alarms acknowledged through alarm server restarts
+            if (SeverityLevel.shouldRemainAcknowledged(initial.severity, initial.current_severity)) {
+                current_state = new AlarmState(initial.severity, initial.message, initial.value, initial.time);
+            } else {
+                current_state = new AlarmState(initial.current_severity, initial.current_message, "?", initial.time);
+            }
         }
         final AlarmLogicListener listener = new AlarmLogicListener()
         {
